@@ -4,7 +4,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Package, ShoppingBag, Users, Settings, LogOut, Home } from "lucide-react";
+import { LayoutDashboard, Package, Tags, ShoppingBag, Users, Settings, LogOut, Home } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 const items = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard, end: true },
   { title: "Products", url: "/admin/products", icon: Package },
+  { title: "Categories", url: "/admin/categories", icon: Tags },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
   { title: "Customers", url: "/admin/customers", icon: Users },
   { title: "Settings", url: "/admin/settings", icon: Settings },

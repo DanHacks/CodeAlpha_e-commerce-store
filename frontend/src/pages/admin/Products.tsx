@@ -207,38 +207,77 @@ const ProductsAdmin = () => {
               <div><Label>Price ($)</Label><Input type="number" min={0} step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} required /></div>
               <div><Label>Stock</Label><Input type="number" min={0} value={form.stock} onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} required /></div>
             </div>
-            <div><Label>Category</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} required /></div>
+            <div>
+              <Label>Category</Label>
+              <Select
+                value={categories.includes(form.category) ? form.category : (form.category ? "__new" : "")}
+                onValueChange={(v) => setForm({ ...form, category: v === "__new" ? "" : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  <SelectItem value="__new">+ Add new category</SelectItem>
+                </SelectContent>
+              </Select>
+              {(!categories.includes(form.category)) && (
+                <Input
+                  className="mt-2"
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  placeholder="New category name"
+                  required
+                />
+              )}
+            </div>
 
-            {/* Image: real upload OR paste URL */}
+            {/* Image: drag-drop upload OR paste URL */}
             <div>
               <Label>Product image</Label>
-              <div className="flex items-start gap-3 mt-1">
+              <div
+                onDragOver={(e) => { e.preventDefault(); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) onFile(f);
+                }}
+                onClick={() => !uploading && fileRef.current?.click()}
+                className="mt-1 cursor-pointer rounded-lg border-2 border-dashed border-border hover:border-primary/60 transition-colors p-4 flex items-center gap-4"
+              >
                 <div className="h-20 w-20 rounded-lg border border-border bg-muted overflow-hidden flex items-center justify-center shrink-0">
                   {form.image
                     ? <img src={form.image} alt="preview" className="h-full w-full object-cover" />
-                    : <span className="text-xs text-muted-foreground">Preview</span>}
+                    : <Upload className="h-6 w-6 text-muted-foreground" />}
                 </div>
-                <div className="flex-1 space-y-2">
-                  <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()} className="gap-2">
-                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    {uploading ? "Uploading..." : "Upload image"}
-                  </Button>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
-                  />
-                  {uploading && <Progress value={uploadPct} className="h-2" />}
-                  <Input
-                    value={form.image.startsWith("data:") ? "" : form.image}
-                    onChange={(e) => setForm({ ...form, image: e.target.value })}
-                    placeholder="…or paste image URL"
-                    disabled={uploading}
-                  />
+                <div className="flex-1 text-sm">
+                  {uploading ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Uploading {uploadPct}%
+                      </div>
+                      <Progress value={uploadPct} className="h-2" />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="font-medium text-foreground">Click or drop an image here</p>
+                      <p className="text-xs text-muted-foreground">PNG, JPG, WEBP up to ~5MB</p>
+                    </>
+                  )}
                 </div>
               </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
+              />
+              <Input
+                className="mt-2"
+                value={form.image.startsWith("data:") ? "" : form.image}
+                onChange={(e) => setForm({ ...form, image: e.target.value })}
+                placeholder="…or paste image URL"
+                disabled={uploading}
+              />
             </div>
 
             <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>

@@ -18,6 +18,7 @@ import About from "./pages/About.tsx";
 import Contact from "./pages/Contact.tsx";
 import Overview from "./pages/admin/Overview.tsx";
 import ProductsAdmin from "./pages/admin/Products.tsx";
+import CategoriesAdmin from "./pages/admin/Categories.tsx";
 import OrdersAdmin from "./pages/admin/Orders.tsx";
 import CustomersAdmin from "./pages/admin/Customers.tsx";
 import SettingsAdmin from "./pages/admin/Settings.tsx";
@@ -46,6 +47,7 @@ const App = () => (
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/admin" element={<AdminRoute><Overview /></AdminRoute>} />
                 <Route path="/admin/products" element={<AdminRoute><ProductsAdmin /></AdminRoute>} />
+                <Route path="/admin/categories" element={<AdminRoute><CategoriesAdmin /></AdminRoute>} />
                 <Route path="/admin/orders" element={<AdminRoute><OrdersAdmin /></AdminRoute>} />
                 <Route path="/admin/customers" element={<AdminRoute><CustomersAdmin /></AdminRoute>} />
                 <Route path="/admin/settings" element={<AdminRoute><SettingsAdmin /></AdminRoute>} />

@@ -72,19 +72,19 @@ src/
 ```
 
 ## 🌍 Deployment
-Static SPA. Build with `bun run build` and deploy `dist/` to any static host (Vercel, Netlify, Cloudflare Pages, Lovable).
+Static SPA. Build with `bun run build` and deploy `dist/` to any static host (Vercel, Netlify, Cloudflare Pages).
 
 ---
 
 # 🛣️ Backend Roadmap & API Guide
 
-This section is the spec to follow when migrating SparkShop from mocked frontend state to a real backend (Node/Express, NestJS, FastAPI, or Lovable Cloud Edge Functions). The frontend already calls these endpoints conceptually via context providers — wire each provider to the matching REST routes below.
+This section is the spec to follow when migrating SparkShop from mocked frontend state to a real backend. The frontend already calls these endpoints conceptually via context providers — wire each provider to the matching REST routes below.
 
 ## Suggested stack
-- **Runtime:** Node.js + Express *or* Lovable Cloud Edge Functions
-- **DB:** PostgreSQL (via Lovable Cloud / Supabase) with Row Level Security
-- **Auth:** JWT (access + refresh) or Supabase Auth
-- **File storage:** S3-compatible bucket (Lovable Cloud Storage) for product images
+- **Runtime:** Node.js + Express (or NestJS / FastAPI)
+- **DB:** PostgreSQL with Row Level Security
+- **Auth:** JWT (access + refresh)
+- **File storage:** S3-compatible bucket (AWS S3 / Cloudflare R2) for product images
 - **Payments:** Stripe (cards), PayPal Orders v2, Binance Pay merchant API
 - **Validation:** Zod (TS) or Pydantic (Py)
 
@@ -173,7 +173,7 @@ payments        (id, order_id FK, provider, provider_ref, status, raw JSONB)
 | `lib/upload.ts`                | `POST /api/uploads/image` (multipart)     |
 
 ## Implementation order (recommended)
-1. **Cloud + DB schema** — provision Postgres, create tables, enable RLS.
+1. **DB schema** — provision Postgres, create tables, enable RLS.
 2. **Auth** — register/login + JWT, wire `AuthContext`.
 3. **Products CRUD + image upload** — wire admin panel.
 4. **Orders** — create + list endpoints, wire dashboard.
