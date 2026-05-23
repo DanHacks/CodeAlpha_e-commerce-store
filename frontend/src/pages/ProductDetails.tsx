@@ -3,6 +3,7 @@ import Layout from "@/components/Layout";
 import { useProducts } from "@/context/ProductsContext";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import ProductCard from "@/components/ProductCard";
 import { useState } from "react";
 import { Minus, Plus, ArrowLeft, ShoppingCart, Check } from "lucide-react";
@@ -13,6 +14,7 @@ const ProductDetails = () => {
   const { products, getProduct } = useProducts();
   const product = getProduct(id || "");
   const { add } = useCart();
+  const { format } = useCurrency();
   const [qty, setQty] = useState(1);
 
   if (!product) {
@@ -46,7 +48,7 @@ const ProductDetails = () => {
           <div className="flex flex-col">
             <span className="text-xs uppercase tracking-wider text-primary font-semibold">{product.category}</span>
             <h1 className="mt-2 text-3xl md:text-4xl font-bold text-secondary">{product.name}</h1>
-            <p className="mt-3 text-3xl font-bold text-primary">${product.price}</p>
+            <p className="mt-3 text-3xl font-bold text-primary">{format(product.price)}</p>
             <p className="mt-6 text-muted-foreground leading-relaxed">{product.description}</p>
             <div className="mt-6 flex items-center gap-2 text-sm">
               <Check className="h-4 w-4 text-primary" />

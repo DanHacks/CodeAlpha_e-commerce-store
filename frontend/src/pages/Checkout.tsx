@@ -2,19 +2,21 @@ import { useState } from "react";
 import Layout from "@/components/Layout";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate, Navigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, CheckCircle2, CreditCard, Truck, ShieldCheck, Wallet, Bitcoin } from "lucide-react";
+import { Loader2, CheckCircle2, CreditCard, Truck, ShieldCheck, Wallet, Building2 } from "lucide-react";
 
 type Step = "form" | "processing" | "success" | "error";
-type PayMethod = "card" | "paypal" | "binance";
+type PayMethod = "card" | "paypal" | "bank";
 
 const Checkout = () => {
   const { items, total, clear } = useCart();
   const { user, addOrder } = useAuth();
+  const { format } = useCurrency();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: user?.name || "",
@@ -25,7 +27,7 @@ const Checkout = () => {
     expiry: "",
     cvv: "",
     paypalEmail: "",
-    binanceId: "",
+    bankRef: "",
   });
   const [method, setMethod] = useState<PayMethod>("card");
   const [step, setStep] = useState<Step>("form");
@@ -68,9 +70,9 @@ const Checkout = () => {
       if (!/^\S+@\S+\.\S+$/.test(form.paypalEmail)) { toast.error("Enter a valid PayPal email"); return { ok: false }; }
       if (form.paypalEmail.startsWith("fail@")) return { ok: true, failNote: "PayPal rejected the payment. Try another method." };
     }
-    if (method === "binance") {
-      if (form.binanceId.trim().length < 6) { toast.error("Enter your Binance Pay ID"); return { ok: false }; }
-      if (form.binanceId.trim().toLowerCase() === "fail") return { ok: true, failNote: "Binance transfer was not confirmed." };
+    if (method === "bank") {
+      if (form.bankRef.trim().length < 4) { toast.error("Enter your bank transfer reference"); return { ok: false }; }
+      if (form.bankRef.trim().toLowerCase() === "fail") return { ok: true, failNote: "We could not verify your bank transfer." };
     }
     return { ok: true };
   };
@@ -151,7 +153,7 @@ const Checkout = () => {
           <>
             <h1 className="text-3xl font-bold text-secondary mb-2">Checkout</h1>
             <p className="text-muted-foreground mb-8 flex items-center gap-2 text-sm">
-              <ShieldCheck className="h-4 w-4 text-primary" /> Secure checkout · test failure: card ends 0000, paypal "fail@…", binance id "fail"
+              <ShieldCheck className="h-4 w-4 text-primary" /> Secure checkout · test failure: card ends 0000, paypal "fail@…", bank ref "fail"
             </p>
             <form onSubmit={submit} className="grid gap-8 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6 rounded-xl border border-border bg-card p-6 shadow-soft">
@@ -170,7 +172,7 @@ const Checkout = () => {
                   <div className="mt-4 flex flex-col sm:flex-row gap-2">
                     {methodBtn("card", "Card", CreditCard)}
                     {methodBtn("paypal", "PayPal", Wallet)}
-                    {methodBtn("binance", "Binance Pay", Bitcoin)}
+                    {methodBtn("bank", "Bank Transfer", Building2)}
                   </div>
 
                   {method === "card" && (
@@ -225,18 +227,24 @@ const Checkout = () => {
                     </div>
                   )}
 
-                  {method === "binance" && (
+                  {method === "bank" && (
                     <div className="mt-5 space-y-3">
-                      <div>
-                        <Label>Binance Pay ID</Label>
-                        <Input
-                          placeholder="123456789"
-                          value={form.binanceId}
-                          onChange={(e) => setForm({ ...form, binanceId: e.target.value })}
-                        />
+                      <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm space-y-1">
+                        <p className="font-semibold text-foreground">Bank transfer details</p>
+                        <p><span className="text-muted-foreground">Bank:</span> SparkShop Trust Bank</p>
+                        <p><span className="text-muted-foreground">Account name:</span> SparkShop Ltd</p>
+                        <p><span className="text-muted-foreground">Account no:</span> <span className="font-mono">8821 4476 02</span></p>
+                        <p><span className="text-muted-foreground">SWIFT/IBAN:</span> <span className="font-mono">SPRKUS33XXX</span></p>
+                        <p className="pt-1"><span className="text-muted-foreground">Amount:</span> <span className="font-semibold">{format(total)}</span></p>
                       </div>
-                      <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-                        Send <span className="font-mono text-foreground">${total.toFixed(2)}</span> in USDT to merchant ID <span className="font-mono text-foreground">SPARK-887421</span>. Order will confirm after on-chain detection (simulated).
+                      <div>
+                        <Label>Your transfer reference</Label>
+                        <Input
+                          placeholder="e.g. TRX-882134"
+                          value={form.bankRef}
+                          onChange={(e) => setForm({ ...form, bankRef: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">We'll verify the transfer and confirm your order by email within 1 business day.</p>
                       </div>
                     </div>
                   )}
@@ -249,17 +257,17 @@ const Checkout = () => {
                   {items.map((i) => (
                     <li key={i.product.id} className="flex justify-between gap-3">
                       <span className="text-foreground/80 truncate">{i.product.name} × {i.quantity}</span>
-                      <span className="shrink-0">${(i.product.price * i.quantity).toFixed(2)}</span>
+                      <span className="shrink-0">{format(i.product.price * i.quantity)}</span>
                     </li>
                   ))}
                 </ul>
                 <div className="border-t border-border mt-4 pt-4 flex justify-between font-bold">
-                  <span>Total</span><span className="text-primary">${total.toFixed(2)}</span>
+                  <span>Total</span><span className="text-primary">{format(total)}</span>
                 </div>
                 <Button type="submit" className="w-full mt-6 bg-primary hover:bg-primary/90" size="lg">
-                  {method === "card" && `Pay $${total.toFixed(2)}`}
+                  {method === "card" && `Pay ${format(total)}`}
                   {method === "paypal" && `Continue with PayPal`}
-                  {method === "binance" && `Confirm Binance transfer`}
+                  {method === "bank" && `I've sent the transfer`}
                 </Button>
               </aside>
             </form>

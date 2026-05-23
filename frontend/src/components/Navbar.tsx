@@ -1,14 +1,20 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, LogOut, Menu, X, Shield } from "lucide-react";
+import { ShoppingCart, User, LogOut, Menu, X, Shield, Globe } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { useCurrency, CURRENCIES } from "@/context/CurrencyContext";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import logo from "@/assets/logo.png";
 
 const Navbar = () => {
   const { count } = useCart();
   const { user, logout, isAdmin } = useAuth();
+  const { currency, setCurrency, auto } = useCurrency();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -32,7 +38,23 @@ const Navbar = () => {
           {isAdmin && <NavLink to="/admin" className={linkCls}>Admin</NavLink>}
         </nav>
 
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-1.5" title={auto ? "Auto-detected" : "Manual"}>
+                <Globe className="h-4 w-4" /> {currency}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-h-80 overflow-auto">
+              <DropdownMenuLabel>Currency {auto && <span className="text-xs text-muted-foreground">· auto</span>}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {CURRENCIES.map((c) => (
+                <DropdownMenuItem key={c} onClick={() => setCurrency(c)} className={c === currency ? "bg-muted font-semibold" : ""}>
+                  {c}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="ghost" size="icon" onClick={() => navigate("/cart")} className="relative">
             <ShoppingCart className="h-5 w-5" />
             {count > 0 && (

@@ -2,10 +2,12 @@ import { Link } from "react-router-dom";
 import { Product } from "@/data/products";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import { ShoppingCart } from "lucide-react";
 
 const ProductCard = ({ product }: { product: Product }) => {
   const { add } = useCart();
+  const { format } = useCurrency();
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-soft transition-smooth hover:-translate-y-1 hover:shadow-elegant">
       <Link to={`/product/${product.id}`} className="block aspect-square overflow-hidden bg-muted">
@@ -23,7 +25,7 @@ const ProductCard = ({ product }: { product: Product }) => {
           {product.name}
         </Link>
         <div className="mt-auto flex items-center justify-between pt-4">
-          <span className="text-lg font-bold text-secondary">${product.price}</span>
+          <span className="text-lg font-bold text-secondary">{format(product.price)}</span>
           <Button size="sm" onClick={() => add(product)} className="bg-primary hover:bg-primary/90 gap-1.5">
             <ShoppingCart className="h-4 w-4" /> Add
           </Button>

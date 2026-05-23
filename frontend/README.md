@@ -1,6 +1,6 @@
 # SparkShop ⚡
 
-A modern e-commerce MVP built with **React + Vite + TypeScript + Tailwind**. Features a full storefront, cart, multi-method checkout (Card / PayPal / Binance Pay), customer dashboard, and a complete super-admin console with sidebar navigation, image uploads, and CRUD product management.
+A modern e-commerce MVP built with **React + Vite + TypeScript + Tailwind**. Features a full storefront, cart, multi-method checkout (Card / PayPal / Bank Transfer), automatic currency detection by device location, customer dashboard, and a complete super-admin console with sidebar navigation, image uploads, and CRUD product management.
 
 > **Author:** Hydan Koech
 > **Branding:** orange (`#F97316`) + deep navy (`#1E293B`), 3D SparkShop logo used as both favicon and in-app brand mark.
@@ -14,11 +14,12 @@ A modern e-commerce MVP built with **React + Vite + TypeScript + Tailwind**. Fea
 - Search + category filtering
 - Product detail page with quantity selector
 - Cart with persistent localStorage state
-- **Checkout with 3 payment methods**: Credit/Debit Card (number + expiry + CVV), PayPal (email redirect), Binance Pay (USDT transfer)
+- **Checkout with 3 payment methods**: Credit/Debit Card (number + expiry + CVV), PayPal (email redirect), Bank Transfer (with bank details + reference)
 - Checkout state machine: `form → processing → success | error`
+- **Auto currency** based on device locale + timezone (USD, EUR, GBP, NGN, KES, ZAR, INR, JPY, …) with manual override in the navbar
 - About + Contact pages
 - Customer dashboard with order history
-- Auth (login / register) — mocked, frontend only
+- Auth: customers register/log in and land on their dashboard; admin logs in with reserved credentials and lands on the admin console
 
 ### Super Admin Console
 Sidebar layout (collapsible) with five sections:
@@ -37,11 +38,11 @@ Password: CodeAlpha@Admin
 ```
 
 ### 💳 Payment test cases (frontend simulation)
-| Method      | Trigger failure with                |
-|-------------|-------------------------------------|
-| Card        | any card number ending in `0000`    |
-| PayPal      | email starting with `fail@`         |
-| Binance Pay | Pay ID equal to `fail`              |
+| Method        | Trigger failure with                |
+|---------------|-------------------------------------|
+| Card          | any card number ending in `0000`    |
+| PayPal        | email starting with `fail@`         |
+| Bank Transfer | transfer reference equal to `fail`  |
 
 ---
 
@@ -85,7 +86,7 @@ This section is the spec to follow when migrating SparkShop from mocked frontend
 - **DB:** PostgreSQL with Row Level Security
 - **Auth:** JWT (access + refresh)
 - **File storage:** S3-compatible bucket (AWS S3 / Cloudflare R2) for product images
-- **Payments:** Stripe (cards), PayPal Orders v2, Binance Pay merchant API
+- **Payments:** Stripe (cards), PayPal Orders v2, manual bank transfer reconciliation (or Plaid / Open Banking)
 - **Validation:** Zod (TS) or Pydantic (Py)
 
 ## Environment variables (server)
@@ -98,8 +99,7 @@ STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 PAYPAL_CLIENT_ID=...
 PAYPAL_CLIENT_SECRET=...
-BINANCE_PAY_API_KEY=...
-BINANCE_PAY_API_SECRET=...
+BANK_WEBHOOK_SECRET=...
 ADMIN_EMAIL=hydan@codealpha.com
 ```
 
@@ -153,8 +153,8 @@ payments        (id, order_id FK, provider, provider_ref, status, raw JSONB)
 | POST   | `/api/payments/stripe/webhook`    | Stripe → mark order `paid` / `failed` |
 | POST   | `/api/payments/paypal/create`     | `{ order_id }` → returns PayPal `approve_url` |
 | POST   | `/api/payments/paypal/capture`    | `{ paypal_order_id }` → captures and updates order |
-| POST   | `/api/payments/binance/create`    | `{ order_id }` → returns `qrcode_url` + `prepay_id` |
-| POST   | `/api/payments/binance/webhook`   | Binance Pay → confirm payment & update order |
+| POST   | `/api/payments/bank/intent`       | `{ order_id }` → returns bank instructions + reference code |
+| POST   | `/api/payments/bank/webhook`      | Banking provider → reconcile transfer & mark order paid |
 
 ### Admin / Customers
 | Method | Path                       | Auth  |
@@ -179,7 +179,7 @@ payments        (id, order_id FK, provider, provider_ref, status, raw JSONB)
 4. **Orders** — create + list endpoints, wire dashboard.
 5. **Stripe (cards)** — payment intent + webhook.
 6. **PayPal Orders v2** — create + capture flow.
-7. **Binance Pay** — order create + webhook signature verification.
+7. **Bank Transfer** — generate per-order reference, reconcile via webhook or admin confirmation.
 8. **Admin stats endpoint** — replace overview KPIs.
 9. **Hardening** — rate limiting, input validation (Zod), audit logs.
 

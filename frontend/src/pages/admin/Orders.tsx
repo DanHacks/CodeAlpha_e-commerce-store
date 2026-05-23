@@ -1,5 +1,6 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useAuth, Order } from "@/context/AuthContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import { ShoppingBag, Truck, CheckCircle2, Trash2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ const statusBadge = (s: Order["status"]) => {
 
 const OrdersAdmin = () => {
   const { orders, updateOrderStatus, deleteOrder } = useAuth();
+  const { format } = useCurrency();
   const [filter, setFilter] = useState<"all" | Order["status"]>("all");
 
   const filtered = useMemo(
@@ -82,7 +84,7 @@ const OrdersAdmin = () => {
                         {o.status}
                       </span>
                     </td>
-                    <td className="p-3 text-right font-bold text-primary">${o.total.toFixed(2)}</td>
+                    <td className="p-3 text-right font-bold text-primary">{format(o.total)}</td>
                     <td className="p-3">
                       <div className="flex justify-end gap-1">
                         {o.status !== "Delivered" && (

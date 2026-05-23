@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProductsProvider } from "@/context/ProductsContext";
+import { CurrencyProvider } from "@/context/CurrencyContext";
 import AdminRoute from "@/components/AdminRoute";
 import Index from "./pages/Index.tsx";
 import ProductDetails from "./pages/ProductDetails.tsx";
@@ -34,6 +35,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ProductsProvider>
+            <CurrencyProvider>
             <CartProvider>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -54,6 +56,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </CartProvider>
+            </CurrencyProvider>
           </ProductsProvider>
         </AuthProvider>
       </BrowserRouter>

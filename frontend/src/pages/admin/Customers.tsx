@@ -1,4 +1,5 @@
 import AdminLayout from "@/components/AdminLayout";
+import { useCurrency } from "@/context/CurrencyContext";
 import { Users } from "lucide-react";
 
 // Mocked customer list — in production this comes from the backend.
@@ -10,7 +11,9 @@ const mockCustomers = [
   { id: "c5", name: "Kenji Tanaka",    email: "kenji@example.com",    orders: 5, spend: 1320.4 },
 ];
 
-const CustomersAdmin = () => (
+const CustomersAdmin = () => {
+  const { format } = useCurrency();
+  return (
   <AdminLayout>
     <div className="mb-6">
       <p className="text-sm text-primary font-semibold uppercase tracking-wider">People</p>
@@ -38,13 +41,14 @@ const CustomersAdmin = () => (
               </td>
               <td className="p-3 text-muted-foreground">{c.email}</td>
               <td className="p-3">{c.orders}</td>
-              <td className="p-3 text-right font-bold text-secondary">${c.spend.toFixed(2)}</td>
+              <td className="p-3 text-right font-bold text-secondary">{format(c.spend)}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   </AdminLayout>
-);
+  );
+};
 
 export default CustomersAdmin;

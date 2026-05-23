@@ -22,10 +22,10 @@ const Login = () => {
     const ok = await login(email, password);
     setLoading(false);
     if (ok) {
-      // Admin email always lands in admin console
+      // Admin email always lands in admin console; everyone else in their dashboard
       const next = params.get("next");
       if (email.toLowerCase() === "hydan@codealpha.com") navigate("/admin");
-      else navigate(next || "/");
+      else navigate(next || "/dashboard");
     }
   };
 

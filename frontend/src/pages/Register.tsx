@@ -19,7 +19,7 @@ const Register = () => {
     setLoading(true);
     const ok = await register(form.name, form.email, form.password);
     setLoading(false);
-    if (ok) navigate("/");
+    if (ok) navigate("/dashboard");
   };
 
   return (

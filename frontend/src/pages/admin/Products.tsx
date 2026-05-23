@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { useProducts } from "@/context/ProductsContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import { Product } from "@/data/products";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ type StockFilter = "all" | "in" | "low" | "out";
 
 const ProductsAdmin = () => {
   const { products, create, update, remove, reset } = useProducts();
+  const { format } = useCurrency();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
@@ -160,7 +162,7 @@ const ProductsAdmin = () => {
                     </div>
                   </td>
                   <td className="p-3 text-muted-foreground">{p.category}</td>
-                  <td className="p-3 font-semibold text-secondary">${p.price}</td>
+                  <td className="p-3 font-semibold text-secondary">{format(p.price)}</td>
                   <td className="p-3">
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                       p.stock > 10 ? "bg-green-100 text-green-700" : p.stock > 0 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"

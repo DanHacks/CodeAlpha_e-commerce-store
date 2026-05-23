@@ -1,11 +1,13 @@
 import Layout from "@/components/Layout";
 import { useCart } from "@/context/CartContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { Trash2, Minus, Plus, ShoppingBag } from "lucide-react";
 
 const Cart = () => {
   const { items, remove, update, total } = useCart();
+  const { format } = useCurrency();
   const navigate = useNavigate();
 
   if (items.length === 0) {
@@ -34,7 +36,7 @@ const Cart = () => {
                 </Link>
                 <div className="flex flex-1 flex-col">
                   <Link to={`/product/${i.product.id}`} className="font-semibold hover:text-primary">{i.product.name}</Link>
-                  <span className="text-sm text-muted-foreground">${i.product.price} each</span>
+                  <span className="text-sm text-muted-foreground">{format(i.product.price)} each</span>
                   <div className="mt-auto flex items-center justify-between">
                     <div className="flex items-center rounded-lg border border-border">
                       <button onClick={() => update(i.product.id, i.quantity - 1)} className="p-2 hover:bg-muted"><Minus className="h-3 w-3" /></button>
@@ -42,7 +44,7 @@ const Cart = () => {
                       <button onClick={() => update(i.product.id, i.quantity + 1)} className="p-2 hover:bg-muted"><Plus className="h-3 w-3" /></button>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-bold text-secondary">${(i.product.price * i.quantity).toFixed(2)}</span>
+                      <span className="font-bold text-secondary">{format(i.product.price * i.quantity)}</span>
                       <Button variant="ghost" size="icon" onClick={() => remove(i.product.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -56,10 +58,10 @@ const Cart = () => {
           <aside className="rounded-xl border border-border bg-card p-6 shadow-soft h-fit">
             <h2 className="text-lg font-bold text-secondary">Order summary</h2>
             <div className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>${total.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{format(total)}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span className="text-primary font-medium">Free</span></div>
               <div className="border-t border-border pt-3 mt-3 flex justify-between text-base font-bold">
-                <span>Total</span><span className="text-primary">${total.toFixed(2)}</span>
+                <span>Total</span><span className="text-primary">{format(total)}</span>
               </div>
             </div>
             <Button onClick={() => navigate("/checkout")} className="w-full mt-6 bg-primary hover:bg-primary/90" size="lg">

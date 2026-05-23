@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
 import { useAuth } from "@/context/AuthContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { Package, Mail, User as UserIcon } from "lucide-react";
 
@@ -11,6 +12,7 @@ const statusColor: Record<string, string> = {
 
 const Dashboard = () => {
   const { user, orders } = useAuth();
+  const { format } = useCurrency();
   const [params] = useSearchParams();
   const justOrdered = params.get("ord");
 
@@ -63,12 +65,12 @@ const Dashboard = () => {
                       {o.items.map((it, idx) => (
                         <li key={idx} className="flex justify-between text-foreground/80">
                           <span>{it.name} × {it.quantity}</span>
-                          <span>${(it.price * it.quantity).toFixed(2)}</span>
+                          <span>{format(it.price * it.quantity)}</span>
                         </li>
                       ))}
                     </ul>
                     <div className="mt-3 flex justify-between font-bold border-t border-border pt-3">
-                      <span>Total</span><span className="text-primary">${o.total.toFixed(2)}</span>
+                      <span>Total</span><span className="text-primary">{format(o.total)}</span>
                     </div>
                   </div>
                 ))}

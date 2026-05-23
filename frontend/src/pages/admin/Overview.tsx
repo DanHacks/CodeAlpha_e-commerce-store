@@ -1,7 +1,8 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/context/ProductsContext";
-import { Package, DollarSign, Boxes, ShoppingBag, TrendingUp, AlertTriangle } from "lucide-react";
+import { useCurrency } from "@/context/CurrencyContext";
+import { Package, DollarSign, Boxes, ShoppingBag, TrendingUp, AlertTriangle, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
@@ -20,6 +21,7 @@ const KPI = ({ icon, label, value }: { icon: React.ReactNode; label: string; val
 const Overview = () => {
   const { products } = useProducts();
   const { orders } = useAuth();
+  const { format } = useCurrency();
   const stats = {
     products: products.length,
     units: products.reduce((s, p) => s + p.stock, 0),
@@ -40,7 +42,7 @@ const Overview = () => {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <KPI icon={<Package className="h-5 w-5" />} label="Products" value={stats.products.toString()} />
         <KPI icon={<Boxes className="h-5 w-5" />} label="Units in stock" value={stats.units.toString()} />
-        <KPI icon={<DollarSign className="h-5 w-5" />} label="Inventory value" value={`$${stats.value.toLocaleString()}`} />
+        <KPI icon={<DollarSign className="h-5 w-5" />} label="Inventory value" value={format(stats.value)} />
         <KPI icon={<ShoppingBag className="h-5 w-5" />} label="Orders" value={stats.orders.toString()} />
       </div>
 
@@ -50,7 +52,7 @@ const Overview = () => {
             <h2 className="text-lg font-bold text-secondary flex items-center gap-2"><TrendingUp className="h-5 w-5 text-primary" /> Recent revenue</h2>
             <span className="text-sm text-muted-foreground">All time</span>
           </div>
-          <p className="text-4xl font-bold text-primary">${stats.revenue.toFixed(2)}</p>
+          <p className="text-4xl font-bold text-primary">{format(stats.revenue)}</p>
           <p className="text-sm text-muted-foreground mt-2">From {stats.orders} order{stats.orders !== 1 ? "s" : ""}.</p>
           <div className="mt-6 flex gap-2">
             <Button asChild className="bg-primary hover:bg-primary/90"><Link to="/admin/products">Manage products</Link></Button>
@@ -78,6 +80,28 @@ const Overview = () => {
             </ul>
           )}
         </div>
+      </div>
+
+      <div className="mt-6 rounded-xl border border-border bg-card p-6 shadow-soft">
+        <h2 className="text-lg font-bold text-secondary flex items-center gap-2 mb-4">
+          <Clock className="h-5 w-5 text-primary" /> Recent orders
+        </h2>
+        {orders.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No orders yet.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {orders.slice(0, 5).map((o) => (
+              <li key={o.id} className="flex items-center justify-between py-3 text-sm">
+                <div>
+                  <p className="font-mono text-xs text-muted-foreground">{o.id}</p>
+                  <p>{new Date(o.createdAt).toLocaleString()}</p>
+                </div>
+                <span className="text-xs rounded-full bg-muted px-2 py-0.5">{o.status}</span>
+                <span className="font-semibold text-primary">{format(o.total)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </AdminLayout>
   );
