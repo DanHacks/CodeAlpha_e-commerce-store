@@ -15,7 +15,7 @@ type PayMethod = "card" | "paypal" | "bank";
 
 const Checkout = () => {
   const { items, total, clear } = useCart();
-  const { user, addOrder } = useAuth();
+  const { user } = useAuth();
   const { format } = useCurrency();
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -92,13 +92,31 @@ const Checkout = () => {
       return;
     }
 
-    const order = addOrder({
-      items: items.map((i) => ({ name: i.product.name, quantity: i.quantity, price: i.product.price })),
-      total,
-    });
-    setOrderId(order.id);
-    clear();
-    setStep("success");
+    try {
+      // Backend expects product_id + quantity.
+      const { api } = await import("@/lib/api");
+      const result = await api.post<{ orderId: string }>(
+        "/api/orders",
+        {
+          items: items.map((i) => ({ product_id: i.product.id, quantity: i.quantity })),
+          shipping: {
+            name: form.name,
+            address: form.address,
+            city: form.city,
+            zip: form.zip,
+          },
+          payment_method: method,
+          payment_ref: method === "bank" ? form.bankRef : undefined,
+        }
+      );
+
+      setOrderId(result.orderId);
+      clear();
+      setStep("success");
+    } catch (e: any) {
+      setErrorMsg(e?.message || "Order failed");
+      setStep("error");
+    }
   };
 
   const methodBtn = (id: PayMethod, label: string, Icon: any) => (

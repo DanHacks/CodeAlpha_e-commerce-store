@@ -3,6 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { Package, Mail, User as UserIcon } from "lucide-react";
+import { useEffect } from "react";
 
 const statusColor: Record<string, string> = {
   Processing: "bg-primary/10 text-primary",
@@ -10,13 +11,19 @@ const statusColor: Record<string, string> = {
   Delivered: "bg-emerald-100 text-emerald-700",
 };
 
+
 const Dashboard = () => {
-  const { user, orders } = useAuth();
+  const { user, orders, refreshOrders } = useAuth();
   const { format } = useCurrency();
   const [params] = useSearchParams();
   const justOrdered = params.get("ord");
 
   if (!user) return <Navigate to="/login" replace />;
+
+  // Load latest orders from backend (AuthContext wiring).
+  useEffect(() => {
+    refreshOrders();
+  }, [refreshOrders]);
 
   return (
     <Layout>
@@ -46,6 +53,7 @@ const Dashboard = () => {
           <section className="lg:col-span-2">
             <h1 className="text-2xl font-bold text-secondary mb-4">Your orders</h1>
             {orders.length === 0 ? (
+
               <div className="rounded-xl border border-border border-dashed bg-card p-12 text-center">
                 <Package className="mx-auto h-10 w-10 text-muted-foreground" />
                 <p className="mt-3 text-muted-foreground">You haven't placed any orders yet.</p>
