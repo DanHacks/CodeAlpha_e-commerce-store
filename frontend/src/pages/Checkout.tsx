@@ -6,16 +6,22 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { useNavigate, Navigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, CheckCircle2, CreditCard, Truck, ShieldCheck, Wallet, Building2 } from "lucide-react";
+import {
+  Loader2, CheckCircle2, CreditCard, Truck, ShieldCheck, Wallet, Building2,
+  Apple, Smartphone, Bitcoin, Phone,
+} from "lucide-react";
 
 type Step = "form" | "processing" | "success" | "error";
-type PayMethod = "card" | "paypal" | "bank";
+type PayMethod = "card" | "paypal" | "bank" | "applepay" | "googlepay" | "crypto" | "mpesa";
 
 const Checkout = () => {
   const { items, total, clear } = useCart();
-  const { user } = useAuth();
+  const { user, addOrder } = useAuth();
   const { format } = useCurrency();
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -23,11 +29,15 @@ const Checkout = () => {
     address: "",
     city: "",
     zip: "",
+    country: "",
     card: "",
     expiry: "",
     cvv: "",
     paypalEmail: "",
     bankRef: "",
+    cryptoCoin: "USDT" as "USDT" | "BTC" | "ETH" | "BNB",
+    cryptoTx: "",
+    mpesaPhone: "",
   });
   const [method, setMethod] = useState<PayMethod>("card");
   const [step, setStep] = useState<Step>("form");
@@ -37,7 +47,6 @@ const Checkout = () => {
   if (!user) return <Navigate to="/login?next=/checkout" replace />;
   if (items.length === 0 && step === "form") return <Navigate to="/cart" replace />;
 
-  // Format helpers for card inputs
   const formatCard = (v: string) =>
     v.replace(/\D/g, "").slice(0, 19).replace(/(.{4})/g, "$1 ").trim();
   const formatExpiry = (v: string) => {
@@ -60,9 +69,8 @@ const Checkout = () => {
       if (!/^\d{2}\/\d{2}$/.test(form.expiry)) { toast.error("Expiry must be MM/YY"); return { ok: false }; }
       const [mm, yy] = form.expiry.split("/").map(Number);
       if (mm < 1 || mm > 12) { toast.error("Invalid expiry month"); return { ok: false }; }
-      const now = new Date();
-      const exp = new Date(2000 + yy, mm); // first of next month
-      if (exp <= now) { toast.error("Card is expired"); return { ok: false }; }
+      const exp = new Date(2000 + yy, mm);
+      if (exp <= new Date()) { toast.error("Card is expired"); return { ok: false }; }
       if (!/^\d{3,4}$/.test(form.cvv)) { toast.error("Invalid CVV"); return { ok: false }; }
       if (card.endsWith("0000")) return { ok: true, failNote: "Your card was declined. Please try another payment method." };
     }
@@ -74,6 +82,16 @@ const Checkout = () => {
       if (form.bankRef.trim().length < 4) { toast.error("Enter your bank transfer reference"); return { ok: false }; }
       if (form.bankRef.trim().toLowerCase() === "fail") return { ok: true, failNote: "We could not verify your bank transfer." };
     }
+    if (method === "crypto") {
+      if (form.cryptoTx.trim().length < 8) { toast.error("Paste the transaction hash"); return { ok: false }; }
+      if (form.cryptoTx.trim().toLowerCase() === "fail") return { ok: true, failNote: "Transaction not found on chain." };
+    }
+    if (method === "mpesa") {
+      const phone = form.mpesaPhone.replace(/\s/g, "");
+      if (!/^\+?\d{9,15}$/.test(phone)) { toast.error("Enter a valid phone number"); return { ok: false }; }
+      if (phone.endsWith("0000")) return { ok: true, failNote: "M-Pesa STK push was cancelled." };
+    }
+    // applepay / googlepay → device-side prompt simulated, always succeeds
     return { ok: true };
   };
 
@@ -92,44 +110,40 @@ const Checkout = () => {
       return;
     }
 
-    try {
-      // Backend expects product_id + quantity.
-      const { api } = await import("@/lib/api");
-      const result = await api.post<{ orderId: string }>(
-        "/api/orders",
-        {
-          items: items.map((i) => ({ product_id: i.product.id, quantity: i.quantity })),
-          shipping: {
-            name: form.name,
-            address: form.address,
-            city: form.city,
-            zip: form.zip,
-          },
-          payment_method: method,
-          payment_ref: method === "bank" ? form.bankRef : undefined,
-        }
-      );
-
-      setOrderId(result.orderId);
-      clear();
-      setStep("success");
-    } catch (e: any) {
-      setErrorMsg(e?.message || "Order failed");
-      setStep("error");
-    }
+    const order = addOrder({
+      items: items.map((i) => ({ name: i.product.name, quantity: i.quantity, price: i.product.price })),
+      total,
+    });
+    setOrderId(order.id);
+    clear();
+    setStep("success");
   };
 
   const methodBtn = (id: PayMethod, label: string, Icon: any) => (
     <button
+      key={id}
       type="button"
       onClick={() => setMethod(id)}
-      className={`flex-1 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-medium transition ${
+      className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-medium transition ${
         method === id ? "border-primary bg-primary/5 text-primary" : "border-border bg-background text-foreground/70 hover:border-primary/50"
       }`}
     >
       <Icon className="h-4 w-4" /> {label}
     </button>
   );
+
+  // CTA label per method
+  const ctaLabel = () => {
+    switch (method) {
+      case "card":      return `Pay ${format(total)}`;
+      case "paypal":    return "Continue with PayPal";
+      case "bank":      return "I've sent the transfer";
+      case "applepay":  return `Pay with Apple Pay`;
+      case "googlepay": return `Pay with Google Pay`;
+      case "crypto":    return `Confirm ${form.cryptoCoin} payment`;
+      case "mpesa":     return "Send M-Pesa STK push";
+    }
+  };
 
   return (
     <Layout>
@@ -171,7 +185,7 @@ const Checkout = () => {
           <>
             <h1 className="text-3xl font-bold text-secondary mb-2">Checkout</h1>
             <p className="text-muted-foreground mb-8 flex items-center gap-2 text-sm">
-              <ShieldCheck className="h-4 w-4 text-primary" /> Secure checkout · test failure: card ends 0000, paypal "fail@…", bank ref "fail"
+              <ShieldCheck className="h-4 w-4 text-primary" /> Secure checkout · global payments accepted
             </p>
             <form onSubmit={submit} className="grid gap-8 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6 rounded-xl border border-border bg-card p-6 shadow-soft">
@@ -182,50 +196,41 @@ const Checkout = () => {
                     <div className="sm:col-span-2"><Label>Address</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
                     <div><Label>City</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
                     <div><Label>ZIP</Label><Input value={form.zip} onChange={(e) => setForm({ ...form, zip: e.target.value })} /></div>
+                    <div className="sm:col-span-2"><Label>Country</Label><Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder="e.g. Kenya" /></div>
                   </div>
                 </div>
 
                 <div className="border-t border-border pt-6">
                   <h2 className="font-semibold text-lg text-secondary flex items-center gap-2"><CreditCard className="h-5 w-5 text-primary" /> Payment method</h2>
-                  <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                    {methodBtn("card", "Card", CreditCard)}
-                    {methodBtn("paypal", "PayPal", Wallet)}
-                    {methodBtn("bank", "Bank Transfer", Building2)}
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {methodBtn("card",      "Card",       CreditCard)}
+                    {methodBtn("paypal",    "PayPal",     Wallet)}
+                    {methodBtn("applepay",  "Apple Pay",  Apple)}
+                    {methodBtn("googlepay", "Google Pay", Smartphone)}
+                    {methodBtn("crypto",    "Crypto",     Bitcoin)}
+                    {methodBtn("mpesa",     "M-Pesa",     Phone)}
+                    {methodBtn("bank",      "Bank",       Building2)}
                   </div>
 
                   {method === "card" && (
                     <div className="grid gap-4 sm:grid-cols-2 mt-5">
                       <div className="sm:col-span-2">
                         <Label>Card number</Label>
-                        <Input
-                          placeholder="4242 4242 4242 4242"
-                          value={form.card}
+                        <Input placeholder="4242 4242 4242 4242" value={form.card}
                           onChange={(e) => setForm({ ...form, card: formatCard(e.target.value) })}
-                          inputMode="numeric"
-                          autoComplete="cc-number"
-                        />
+                          inputMode="numeric" autoComplete="cc-number" />
                       </div>
                       <div>
                         <Label>Expiry (MM/YY)</Label>
-                        <Input
-                          placeholder="08/28"
-                          value={form.expiry}
+                        <Input placeholder="08/28" value={form.expiry}
                           onChange={(e) => setForm({ ...form, expiry: formatExpiry(e.target.value) })}
-                          inputMode="numeric"
-                          autoComplete="cc-exp"
-                          maxLength={5}
-                        />
+                          inputMode="numeric" autoComplete="cc-exp" maxLength={5} />
                       </div>
                       <div>
                         <Label>CVV</Label>
-                        <Input
-                          placeholder="123"
-                          value={form.cvv}
+                        <Input placeholder="123" value={form.cvv}
                           onChange={(e) => setForm({ ...form, cvv: e.target.value.replace(/\D/g, "").slice(0, 4) })}
-                          inputMode="numeric"
-                          autoComplete="cc-csc"
-                          maxLength={4}
-                        />
+                          inputMode="numeric" autoComplete="cc-csc" maxLength={4} />
                       </div>
                     </div>
                   )}
@@ -234,14 +239,73 @@ const Checkout = () => {
                     <div className="mt-5 space-y-3">
                       <div>
                         <Label>PayPal email</Label>
-                        <Input
-                          type="email"
-                          placeholder="you@paypal.com"
-                          value={form.paypalEmail}
-                          onChange={(e) => setForm({ ...form, paypalEmail: e.target.value })}
-                        />
+                        <Input type="email" placeholder="you@paypal.com" value={form.paypalEmail}
+                          onChange={(e) => setForm({ ...form, paypalEmail: e.target.value })} />
                       </div>
-                      <p className="text-xs text-muted-foreground">You'll be redirected to PayPal to approve the payment (simulated).</p>
+                      <p className="text-xs text-muted-foreground">You'll be redirected to PayPal to approve the payment.</p>
+                    </div>
+                  )}
+
+                  {method === "applepay" && (
+                    <div className="mt-5 rounded-lg border border-border bg-muted/40 p-5 text-center">
+                      <Apple className="mx-auto h-10 w-10 text-foreground" />
+                      <p className="mt-2 font-semibold">Pay with Apple Pay</p>
+                      <p className="text-xs text-muted-foreground mt-1">Confirm with Face ID / Touch ID on your device.</p>
+                    </div>
+                  )}
+
+                  {method === "googlepay" && (
+                    <div className="mt-5 rounded-lg border border-border bg-muted/40 p-5 text-center">
+                      <Smartphone className="mx-auto h-10 w-10 text-foreground" />
+                      <p className="mt-2 font-semibold">Pay with Google Pay</p>
+                      <p className="text-xs text-muted-foreground mt-1">A Google Pay sheet will open to confirm payment.</p>
+                    </div>
+                  )}
+
+                  {method === "crypto" && (
+                    <div className="mt-5 space-y-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <Label>Coin</Label>
+                          <Select value={form.cryptoCoin} onValueChange={(v) => setForm({ ...form, cryptoCoin: v as typeof form.cryptoCoin })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="USDT">USDT (TRC-20)</SelectItem>
+                              <SelectItem value="BTC">Bitcoin (BTC)</SelectItem>
+                              <SelectItem value="ETH">Ethereum (ETH)</SelectItem>
+                              <SelectItem value="BNB">Binance Coin (BNB)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="self-end text-sm">
+                          <p className="text-muted-foreground">Amount due</p>
+                          <p className="font-semibold">{format(total)}</p>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm font-mono break-all">
+                        {form.cryptoCoin === "USDT" && "TXJ7n9aB4kQ2vL8mP5oR1nE6dF3sC0uW9z"}
+                        {form.cryptoCoin === "BTC"  && "bc1qsparkshop8n7m6q5w4e3r2t1y0p9o8i7u6y5t4"}
+                        {form.cryptoCoin === "ETH"  && "0x9F4eA1c7B8d2C3a4E5f6A7b8C9d0E1f2A3b4C5d6"}
+                        {form.cryptoCoin === "BNB"  && "bnb1sparkshop9k8j7h6g5f4d3s2a1q0w9e8r7t6y5u"}
+                      </div>
+                      <div>
+                        <Label>Transaction hash</Label>
+                        <Input placeholder="Paste your tx hash"
+                          value={form.cryptoTx}
+                          onChange={(e) => setForm({ ...form, cryptoTx: e.target.value })} />
+                      </div>
+                    </div>
+                  )}
+
+                  {method === "mpesa" && (
+                    <div className="mt-5 space-y-3">
+                      <div>
+                        <Label>M-Pesa phone number</Label>
+                        <Input type="tel" placeholder="+254 7XX XXX XXX"
+                          value={form.mpesaPhone}
+                          onChange={(e) => setForm({ ...form, mpesaPhone: e.target.value })} />
+                      </div>
+                      <p className="text-xs text-muted-foreground">An STK push will be sent to your phone. Enter your PIN to authorize.</p>
                     </div>
                   )}
 
@@ -257,12 +321,8 @@ const Checkout = () => {
                       </div>
                       <div>
                         <Label>Your transfer reference</Label>
-                        <Input
-                          placeholder="e.g. TRX-882134"
-                          value={form.bankRef}
-                          onChange={(e) => setForm({ ...form, bankRef: e.target.value })}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">We'll verify the transfer and confirm your order by email within 1 business day.</p>
+                        <Input placeholder="e.g. TRX-882134" value={form.bankRef}
+                          onChange={(e) => setForm({ ...form, bankRef: e.target.value })} />
                       </div>
                     </div>
                   )}
@@ -283,10 +343,11 @@ const Checkout = () => {
                   <span>Total</span><span className="text-primary">{format(total)}</span>
                 </div>
                 <Button type="submit" className="w-full mt-6 bg-primary hover:bg-primary/90" size="lg">
-                  {method === "card" && `Pay ${format(total)}`}
-                  {method === "paypal" && `Continue with PayPal`}
-                  {method === "bank" && `I've sent the transfer`}
+                  {ctaLabel()}
                 </Button>
+                <p className="mt-4 text-[11px] text-muted-foreground text-center leading-relaxed">
+                  Test failures: card ends 0000 · paypal "fail@…" · bank ref "fail" · crypto tx "fail" · phone ends 0000
+                </p>
               </aside>
             </form>
           </>

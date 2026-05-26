@@ -3,15 +3,16 @@ export type Product = {
   name: string;
   price: number;
   description: string;
-  image: string;
+  image: string;        // main / cover image
+  images?: string[];    // additional showcase photos (optional)
   stock: number;
   category: string;
 };
 
 // Real product photography sourced from Unsplash (royalty-free).
 export const products: Product[] = [
-  { id: "p1",  name: "Aurora Wireless Headphones", price: 189, description: "Studio-grade noise-cancelling headphones with 40h battery life and plush memory-foam cushions.", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&q=80&auto=format&fit=crop", stock: 12, category: "Audio" },
-  { id: "p2",  name: "Nimbus Smart Watch", price: 249, description: "Track your day with a sleek titanium body, AMOLED display, and 7-day battery.", image: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=900&q=80&auto=format&fit=crop", stock: 8,  category: "Wearables" },
+  { id: "p1",  name: "Aurora Wireless Headphones", price: 189, description: "Studio-grade noise-cancelling headphones with 40h battery life and plush memory-foam cushions.", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&q=80&auto=format&fit=crop", images: ["https://images.unsplash.com/photo-1583394838336-acd977736f90?w=900&q=80&auto=format&fit=crop","https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&q=80&auto=format&fit=crop"], stock: 12, category: "Audio" },
+  { id: "p2",  name: "Nimbus Smart Watch", price: 249, description: "Track your day with a sleek titanium body, AMOLED display, and 7-day battery.", image: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=900&q=80&auto=format&fit=crop", images: ["https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=80&auto=format&fit=crop"], stock: 8,  category: "Wearables" },
   { id: "p3",  name: "Lumen Desk Lamp", price: 79, description: "Warm-to-cool tunable LED with wireless charging base and minimalist matte finish.", image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=900&q=80&auto=format&fit=crop", stock: 25, category: "Home" },
   { id: "p4",  name: "Trail Daypack 22L", price: 119, description: "Weatherproof recycled-nylon daypack with padded laptop sleeve and ergonomic straps.", image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=900&q=80&auto=format&fit=crop", stock: 18, category: "Bags" },
   { id: "p5",  name: "Ceramic Pour-Over Set", price: 64, description: "Hand-thrown ceramic dripper with bamboo lid and 600ml borosilicate carafe.", image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=900&q=80&auto=format&fit=crop", stock: 30, category: "Kitchen" },
@@ -34,6 +35,19 @@ export const products: Product[] = [
   { id: "p22", name: "Aroma Diffuser", price: 55, description: "Ultrasonic essential-oil diffuser with mood lighting and 8h runtime.", image: "https://images.unsplash.com/photo-1600612253971-422e7f7faeb6?w=900&q=80&auto=format&fit=crop", stock: 30, category: "Home" },
   { id: "p23", name: "Fountain Pen", price: 79, description: "Brass-bodied fountain pen with iridium nib for an effortless glide.", image: "https://images.unsplash.com/photo-1583485088034-697b5bc36b92?w=900&q=80&auto=format&fit=crop", stock: 24, category: "Stationery" },
   { id: "p24", name: "Gaming Mouse RGB", price: 89, description: "26K DPI optical sensor, 8 programmable buttons, ultra-light shell.", image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=900&q=80&auto=format&fit=crop", stock: 32, category: "Electronics" },
+  // New items
+  { id: "p25", name: "4K Action Camera", price: 219, description: "Waterproof 4K60 action cam with electronic stabilization and dual mics.", image: "https://images.unsplash.com/photo-1526178613658-3f1622045557?w=900&q=80&auto=format&fit=crop", stock: 18, category: "Electronics" },
+  { id: "p26", name: "Studio Microphone", price: 149, description: "Cardioid condenser USB-C microphone with zero-latency monitoring.", image: "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=900&q=80&auto=format&fit=crop", stock: 22, category: "Audio" },
+  { id: "p27", name: "Drone Mini Pro", price: 599, description: "Foldable 4K drone with 31-minute flight time and obstacle sensing.", image: "https://images.unsplash.com/photo-1473968512647-3e447244af8f?w=900&q=80&auto=format&fit=crop", stock: 7,  category: "Electronics" },
+  { id: "p28", name: "Smart Door Lock", price: 199, description: "Fingerprint + app + keypad smart lock with auto-lock and guest codes.", image: "https://images.unsplash.com/photo-1558002038-1055907df827?w=900&q=80&auto=format&fit=crop", stock: 14, category: "Home" },
+  { id: "p29", name: "Robot Vacuum", price: 379, description: "LiDAR mapping robot vacuum with mop function and self-empty base.", image: "https://images.unsplash.com/photo-1603204077859-cf02b39c1b16?w=900&q=80&auto=format&fit=crop", stock: 11, category: "Home" },
+  { id: "p30", name: "Air Purifier HEPA", price: 229, description: "True-HEPA H13 purifier with air-quality sensor, covers 400 sq ft.", image: "https://images.unsplash.com/photo-1626436819821-d2cbcc7a3667?w=900&q=80&auto=format&fit=crop", stock: 16, category: "Home" },
+  { id: "p31", name: "Electric Kettle", price: 59, description: "1.7L stainless variable-temp electric kettle with keep-warm.", image: "https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?w=900&q=80&auto=format&fit=crop", stock: 40, category: "Kitchen" },
+  { id: "p32", name: "Cast Iron Skillet", price: 45, description: "Pre-seasoned 12-inch cast-iron skillet, oven-to-stove-to-grill.", image: "https://images.unsplash.com/photo-1574484284002-952d92456975?w=900&q=80&auto=format&fit=crop", stock: 55, category: "Kitchen" },
+  { id: "p33", name: "Leather Tote Bag", price: 159, description: "Full-grain vegetable-tanned leather tote with brass hardware.", image: "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=900&q=80&auto=format&fit=crop", stock: 19, category: "Bags" },
+  { id: "p34", name: "Sport Sunglasses", price: 79, description: "Wraparound sport shades with anti-fog polarized lenses.", image: "https://images.unsplash.com/photo-1577803645773-f96470509666?w=900&q=80&auto=format&fit=crop", stock: 33, category: "Accessories" },
+  { id: "p35", name: "Resistance Band Set", price: 29, description: "5-tier resistance bands with door anchor and carry pouch.", image: "https://images.unsplash.com/photo-1517344884509-a0c97ec11bcc?w=900&q=80&auto=format&fit=crop", stock: 80, category: "Fitness" },
+  { id: "p36", name: "Smart Scale", price: 69, description: "13 body metrics, Wi-Fi sync, multi-user profiles.", image: "https://images.unsplash.com/photo-1591348278863-a8fb3887e2aa?w=900&q=80&auto=format&fit=crop", stock: 27, category: "Fitness" },
 ];
 
 export const getProduct = (id: string) => products.find((p) => p.id === id);

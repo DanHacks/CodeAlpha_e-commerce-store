@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import ProductCard from "@/components/ProductCard";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Minus, Plus, ArrowLeft, ShoppingCart, Check } from "lucide-react";
 
 const ProductDetails = () => {
@@ -16,6 +16,14 @@ const ProductDetails = () => {
   const { add } = useCart();
   const { format } = useCurrency();
   const [qty, setQty] = useState(1);
+
+  // Build gallery: main image + any additional images (deduped)
+  const gallery = useMemo(() => {
+    if (!product) return [] as string[];
+    const all = [product.image, ...(product.images ?? [])].filter(Boolean);
+    return Array.from(new Set(all));
+  }, [product]);
+  const [active, setActive] = useState(0);
 
   if (!product) {
     return (
@@ -37,13 +45,31 @@ const ProductDetails = () => {
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
         <div className="grid gap-10 md:grid-cols-2">
-          <div className="aspect-square overflow-hidden rounded-2xl bg-muted shadow-soft">
-            <img
-              src={product.image}
-              alt={product.name}
-              onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder.svg"; }}
-              className="h-full w-full object-cover"
-            />
+          <div>
+            <div className="aspect-square overflow-hidden rounded-2xl bg-muted shadow-soft">
+              <img
+                src={gallery[active] || product.image}
+                alt={product.name}
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder.svg"; }}
+                className="h-full w-full object-cover transition-opacity"
+              />
+            </div>
+            {gallery.length > 1 && (
+              <div className="mt-3 grid grid-cols-5 gap-2">
+                {gallery.map((src, i) => (
+                  <button
+                    key={src + i}
+                    onClick={() => setActive(i)}
+                    className={`aspect-square overflow-hidden rounded-lg border-2 transition ${
+                      i === active ? "border-primary" : "border-transparent hover:border-border"
+                    }`}
+                    aria-label={`Show image ${i + 1}`}
+                  >
+                    <img src={src} alt={`${product.name} ${i + 1}`} loading="lazy" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex flex-col">
             <span className="text-xs uppercase tracking-wider text-primary font-semibold">{product.category}</span>

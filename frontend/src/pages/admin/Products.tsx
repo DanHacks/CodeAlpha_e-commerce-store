@@ -18,14 +18,16 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Pencil, Plus, Trash2, RefreshCw, Search, Upload, Loader2 } from "lucide-react";
+import { Pencil, Plus, Trash2, RefreshCw, Search, Upload, Loader2, X, ImagePlus, Star } from "lucide-react";
 import { toast } from "sonner";
 import { uploadImage } from "@/lib/upload";
 
-type FormState = Omit<Product, "id">;
-const empty: FormState = { name: "", price: 0, description: "", image: "", stock: 0, category: "" };
+type FormState = Omit<Product, "id"> & { images: string[] };
+const empty: FormState = { name: "", price: 0, description: "", image: "", images: [], stock: 0, category: "" };
 
 type StockFilter = "all" | "in" | "low" | "out";
+
+const MAX_GALLERY = 5; // showcase photos shown when product is selected
 
 const ProductsAdmin = () => {
   const { products, create, update, remove, reset } = useProducts();
@@ -37,9 +39,12 @@ const ProductsAdmin = () => {
   const [editing, setEditing] = useState<Product | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(empty);
-  const [uploading, setUploading] = useState(false);
-  const [uploadPct, setUploadPct] = useState(0);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [mainUploading, setMainUploading] = useState(false);
+  const [mainPct, setMainPct] = useState(0);
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [galleryPct, setGalleryPct] = useState(0);
+  const mainRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   const categories = useMemo(
     () => Array.from(new Set(products.map((p) => p.category))).sort(),
@@ -61,30 +66,62 @@ const ProductsAdmin = () => {
   }, [products, query, category, stockFilter, sort]);
 
   const openCreate = () => { setEditing(null); setForm(empty); setOpen(true); };
-  const openEdit = (p: Product) => { setEditing(p); setForm({ ...p }); setOpen(true); };
+  const openEdit = (p: Product) => {
+    setEditing(p);
+    setForm({ ...p, images: p.images ?? [] });
+    setOpen(true);
+  };
 
-  // Real upload (simulated backend) — returns hosted URL we store on product.image
-  const onFile = async (f: File) => {
-    setUploading(true);
-    setUploadPct(0);
+  const onMainFile = async (f: File) => {
+    setMainUploading(true); setMainPct(0);
     try {
-      const url = await uploadImage(f, setUploadPct);
+      const url = await uploadImage(f, setMainPct);
       setForm((s) => ({ ...s, image: url }));
-      toast.success("Image uploaded");
+      toast.success("Main image uploaded");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploading(false);
-    }
+    } finally { setMainUploading(false); }
   };
+
+  const onGalleryFiles = async (files: FileList | File[]) => {
+    const arr = Array.from(files);
+    const remaining = MAX_GALLERY - form.images.length;
+    if (remaining <= 0) { toast.error(`Up to ${MAX_GALLERY} showcase photos`); return; }
+    const take = arr.slice(0, remaining);
+    setGalleryUploading(true); setGalleryPct(0);
+    try {
+      for (let i = 0; i < take.length; i++) {
+        const url = await uploadImage(take[i], (p) => setGalleryPct(Math.round(((i + p / 100) / take.length) * 100)));
+        setForm((s) => ({ ...s, images: [...s.images, url] }));
+      }
+      toast.success(`${take.length} photo${take.length > 1 ? "s" : ""} added`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally { setGalleryUploading(false); setGalleryPct(0); }
+  };
+
+  const removeGalleryAt = (i: number) =>
+    setForm((s) => ({ ...s, images: s.images.filter((_, idx) => idx !== i) }));
+
+  const promoteToMain = (i: number) =>
+    setForm((s) => {
+      const next = [...s.images];
+      const promoted = next.splice(i, 1)[0];
+      const oldMain = s.image;
+      return { ...s, image: promoted, images: oldMain ? [oldMain, ...next] : next };
+    });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.image || form.price < 0 || form.stock < 0) {
-      return toast.error("Please complete all fields and add an image");
+      return toast.error("Please complete all fields and add a main image");
     }
-    if (editing) update(editing.id, form);
-    else create(form);
+    const payload: Omit<Product, "id"> = {
+      name: form.name, price: form.price, description: form.description,
+      image: form.image, images: form.images, stock: form.stock, category: form.category,
+    };
+    if (editing) update(editing.id, payload);
+    else create(payload);
     setOpen(false);
   };
 
@@ -144,54 +181,59 @@ const ProductsAdmin = () => {
               <tr>
                 <th className="p-3 font-semibold">Product</th>
                 <th className="p-3 font-semibold">Category</th>
+                <th className="p-3 font-semibold">Photos</th>
                 <th className="p-3 font-semibold">Price</th>
                 <th className="p-3 font-semibold">Stock</th>
                 <th className="p-3 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id} className="border-t border-border hover:bg-muted/30">
-                  <td className="p-3">
-                    <div className="flex items-center gap-3">
-                      <img src={p.image} alt={p.name} loading="lazy" className="h-12 w-12 rounded-md object-cover bg-muted" />
-                      <div>
-                        <p className="font-medium text-foreground">{p.name}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1 max-w-md">{p.description}</p>
+              {filtered.map((p) => {
+                const photoCount = 1 + (p.images?.length ?? 0);
+                return (
+                  <tr key={p.id} className="border-t border-border hover:bg-muted/30">
+                    <td className="p-3">
+                      <div className="flex items-center gap-3">
+                        <img src={p.image} alt={p.name} loading="lazy" className="h-12 w-12 rounded-md object-cover bg-muted" />
+                        <div>
+                          <p className="font-medium text-foreground">{p.name}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1 max-w-md">{p.description}</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="p-3 text-muted-foreground">{p.category}</td>
-                  <td className="p-3 font-semibold text-secondary">{format(p.price)}</td>
-                  <td className="p-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      p.stock > 10 ? "bg-green-100 text-green-700" : p.stock > 0 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
-                    }`}>{p.stock} in stock</span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex justify-end gap-2">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="ghost" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete "{p.name}"?</AlertDialogTitle>
-                            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => remove(p.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="p-3 text-muted-foreground">{p.category}</td>
+                    <td className="p-3 text-muted-foreground">{photoCount} {photoCount === 1 ? "photo" : "photos"}</td>
+                    <td className="p-3 font-semibold text-secondary">{format(p.price)}</td>
+                    <td className="p-3">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        p.stock > 10 ? "bg-green-100 text-green-700" : p.stock > 0 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+                      }`}>{p.stock} in stock</span>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex justify-end gap-2">
+                        <Button size="icon" variant="ghost" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="icon" variant="ghost" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete "{p.name}"?</AlertDialogTitle>
+                              <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => remove(p.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No products found.</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No products found.</td></tr>
               )}
             </tbody>
           </table>
@@ -199,7 +241,7 @@ const ProductsAdmin = () => {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit product" : "New product"}</DialogTitle>
           </DialogHeader>
@@ -232,17 +274,13 @@ const ProductsAdmin = () => {
               )}
             </div>
 
-            {/* Image: drag-drop upload OR paste URL */}
+            {/* Main image */}
             <div>
-              <Label>Product image</Label>
+              <Label>Main photo <span className="text-xs text-muted-foreground font-normal">(shown on cards)</span></Label>
               <div
-                onDragOver={(e) => { e.preventDefault(); }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const f = e.dataTransfer.files?.[0];
-                  if (f) onFile(f);
-                }}
-                onClick={() => !uploading && fileRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) onMainFile(f); }}
+                onClick={() => !mainUploading && mainRef.current?.click()}
                 className="mt-1 cursor-pointer rounded-lg border-2 border-dashed border-border hover:border-primary/60 transition-colors p-4 flex items-center gap-4"
               >
                 <div className="h-20 w-20 rounded-lg border border-border bg-muted overflow-hidden flex items-center justify-center shrink-0">
@@ -251,41 +289,96 @@ const ProductsAdmin = () => {
                     : <Upload className="h-6 w-6 text-muted-foreground" />}
                 </div>
                 <div className="flex-1 text-sm">
-                  {uploading ? (
+                  {mainUploading ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" /> Uploading {uploadPct}%
+                        <Loader2 className="h-4 w-4 animate-spin" /> Uploading {mainPct}%
                       </div>
-                      <Progress value={uploadPct} className="h-2" />
+                      <Progress value={mainPct} className="h-2" />
                     </div>
                   ) : (
                     <>
-                      <p className="font-medium text-foreground">Click or drop an image here</p>
+                      <p className="font-medium text-foreground">Click or drop the main image</p>
                       <p className="text-xs text-muted-foreground">PNG, JPG, WEBP up to ~5MB</p>
                     </>
                   )}
                 </div>
               </div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
-              />
+              <input ref={mainRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => e.target.files?.[0] && onMainFile(e.target.files[0])} />
               <Input
                 className="mt-2"
                 value={form.image.startsWith("data:") ? "" : form.image}
                 onChange={(e) => setForm({ ...form, image: e.target.value })}
-                placeholder="…or paste image URL"
-                disabled={uploading}
+                placeholder="…or paste main image URL"
+                disabled={mainUploading}
               />
+            </div>
+
+            {/* Showcase gallery */}
+            <div>
+              <Label>
+                Showcase photos
+                <span className="text-xs text-muted-foreground font-normal"> (shown on product page · up to {MAX_GALLERY})</span>
+              </Label>
+
+              {form.images.length > 0 && (
+                <div className="mt-2 grid grid-cols-5 gap-2">
+                  {form.images.map((src, i) => (
+                    <div key={src + i} className="relative aspect-square rounded-md overflow-hidden border border-border group bg-muted">
+                      <img src={src} alt={`Showcase ${i + 1}`} className="h-full w-full object-cover" />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1">
+                        <button type="button" onClick={() => promoteToMain(i)}
+                          className="p-1.5 rounded-md bg-background/90 hover:bg-background" title="Set as main">
+                          <Star className="h-3.5 w-3.5" />
+                        </button>
+                        <button type="button" onClick={() => removeGalleryAt(i)}
+                          className="p-1.5 rounded-md bg-destructive text-destructive-foreground hover:opacity-90" title="Remove">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) onGalleryFiles(e.dataTransfer.files); }}
+                onClick={() => !galleryUploading && form.images.length < MAX_GALLERY && galleryRef.current?.click()}
+                className={`mt-2 rounded-lg border-2 border-dashed border-border p-3 flex items-center gap-3 text-sm transition-colors ${
+                  form.images.length >= MAX_GALLERY ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:border-primary/60"
+                }`}
+              >
+                <ImagePlus className="h-5 w-5 text-muted-foreground shrink-0" />
+                <div className="flex-1">
+                  {galleryUploading ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Uploading {galleryPct}%
+                      </div>
+                      <Progress value={galleryPct} className="h-2" />
+                    </div>
+                  ) : form.images.length >= MAX_GALLERY ? (
+                    <p className="text-muted-foreground">Gallery full ({MAX_GALLERY}/{MAX_GALLERY})</p>
+                  ) : (
+                    <>
+                      <p className="font-medium text-foreground">Add more photos ({form.images.length}/{MAX_GALLERY})</p>
+                      <p className="text-xs text-muted-foreground">Click or drop multiple images at once</p>
+                    </>
+                  )}
+                </div>
+              </div>
+              <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden"
+                onChange={(e) => e.target.files?.length && onGalleryFiles(e.target.files)} />
             </div>
 
             <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={uploading} className="bg-primary hover:bg-primary/90">{editing ? "Save changes" : "Create product"}</Button>
+              <Button type="submit" disabled={mainUploading || galleryUploading} className="bg-primary hover:bg-primary/90">
+                {editing ? "Save changes" : "Create product"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

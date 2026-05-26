@@ -26,7 +26,6 @@ type AuthCtx = {
   addOrder: (o: Omit<Order, "id" | "createdAt" | "status">) => Order;
   updateOrderStatus: (id: string, status: Order["status"]) => void;
   deleteOrder: (id: string) => void;
-  refreshOrders: () => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -44,64 +43,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     if (!email || !password) return false;
-    try {
-      const r = await (await import("@/lib/api")).api.post<{ accessToken: string; user: User; refreshToken: string }>(
-        "/api/auth/login",
-        { email, password },
-        { skipAuth: true }
-      );
-      localStorage.setItem("access_token", r.accessToken);
-      setUser(r.user);
-      toast.success(r.user.role === "admin" ? "Welcome, Admin" : "Welcome back!");
+    // Admin login path
+    if (email.toLowerCase() === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      setUser({ id: "admin_root", name: "SparkShop Admin", email: ADMIN_EMAIL, role: "admin" });
+      toast.success("Welcome, Admin");
       return true;
-    } catch (e: any) {
-      toast.error(e?.message || "Login failed");
+    }
+    // Reject anyone trying admin email with wrong password
+    if (email.toLowerCase() === ADMIN_EMAIL) {
+      toast.error("Invalid admin credentials");
       return false;
     }
+    setUser({ id: "u_" + Date.now(), name: email.split("@")[0], email, role: "customer" });
+    toast.success("Welcome back!");
+    return true;
   };
 
-  const register = async (name: string, email: string, password: string) => {
-    if (!name || !email || !password) return false;
-    try {
-      const r = await (await import("@/lib/api")).api.post<{ accessToken: string; user: User; refreshToken: string }>(
-        "/api/auth/register",
-        { name, email, password },
-        { skipAuth: true }
-      );
-      localStorage.setItem("access_token", r.accessToken);
-      setUser(r.user);
-      toast.success("Account created");
-      return true;
-    } catch (e: any) {
-      toast.error(e?.message || "Register failed");
+  const register = async (name: string, email: string, _password: string) => {
+    if (!name || !email) return false;
+    if (email.toLowerCase() === ADMIN_EMAIL) {
+      toast.error("This email is reserved");
       return false;
     }
+    setUser({ id: "u_" + Date.now(), name, email, role: "customer" });
+    toast.success("Account created");
+    return true;
   };
 
-  const logout = async () => {
-    try {
-      const { api } = await import("@/lib/api");
-      await api.post("/api/auth/logout", {}, { skipAuth: false });
-    } catch {
-      // ignore
-    } finally {
-      localStorage.removeItem("access_token");
-      setUser(null);
-      setOrders([]);
-      toast("Signed out");
-    }
-  };
+  const logout = () => { setUser(null); toast("Signed out"); };
 
   const addOrder: AuthCtx["addOrder"] = (o) => {
-    // Checkout now writes directly to backend.
-    // Keep method to avoid UI breakage if any page still uses it.
     const order: Order = { ...o, id: "ord_" + Date.now(), createdAt: new Date().toISOString(), status: "Processing" };
     setOrders((c) => [order, ...c]);
     return order;
   };
 
   const updateOrderStatus: AuthCtx["updateOrderStatus"] = (id, status) => {
-    // Admin pages call backend directly; keep local update for UI responsiveness fallback.
     setOrders((c) => c.map((o) => (o.id === id ? { ...o, status } : o)));
     toast.success(`Order marked as ${status}`);
   };
@@ -110,20 +87,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast.success("Order removed");
   };
 
-  const refreshOrders = async () => {
-    try {
-      const { api } = await import("@/lib/api");
-      const r = await api.get<{ items: Order[] }>("/api/orders");
-      setOrders(r.items);
-    } catch {
-      // Keep existing orders on failure (no UX change).
-    }
-  };
-
   return (
-    <Ctx.Provider
-      value={{ user, orders, isAdmin: user?.role === "admin", login, register, logout, addOrder, updateOrderStatus, deleteOrder, refreshOrders }}
-    >
+    <Ctx.Provider value={{ user, orders, isAdmin: user?.role === "admin", login, register, logout, addOrder, updateOrderStatus, deleteOrder }}>
       {children}
     </Ctx.Provider>
   );
